@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net"
 	"net/http"
+	"net/url"
 	"sort"
 	"strconv"
 	"strings"
@@ -64,6 +65,26 @@ func NewRunner(cfg *model.Config) *model.Runner {
 	}
 }
 
+// extractServerHost extracts clean hostname or IP from server host/url fields
+func extractServerHost(serverHost, serverURL string) string {
+	if serverHost != "" {
+		host, _, err := net.SplitHostPort(serverHost)
+		if err == nil && host != "" {
+			return host
+		}
+		return serverHost
+	}
+	if serverURL != "" {
+		if u, err := url.Parse(serverURL); err == nil {
+			host := u.Hostname()
+			if host != "" {
+				return host
+			}
+		}
+	}
+	return ""
+}
+
 // fetchIPv4ClientInfo fetches accurate IPv4 address and ISP details
 func fetchIPv4ClientInfo() (*model.ClientInfo, error) {
 	client := &http.Client{
@@ -90,7 +111,7 @@ func fetchIPv4ClientInfo() (*model.ClientInfo, error) {
 	if meta.Org != "" && !strings.Contains(meta.ISP, meta.Org) {
 		isp = meta.ISP + " (" + meta.Org + ")"
 	}
-	
+
 	// Normalize common French ISP names for clean display
 	lowerIsp := strings.ToLower(isp)
 	if strings.Contains(lowerIsp, "orange") {
@@ -110,9 +131,49 @@ func fetchIPv4ClientInfo() (*model.ClientInfo, error) {
 	}, nil
 }
 
+// fetchServersWithRetry fetches servers with 3x retry mechanism
+func fetchServersWithRetry(r *model.Runner, maxRetries int) (speedtest.Servers, error) {
+	var lastErr error
+	for i := 0; i < maxRetries; i++ {
+		serverList, err := r.Client.FetchServers()
+		if err == nil && len(serverList) > 0 {
+			return serverList, nil
+		}
+		lastErr = err
+		time.Sleep(time.Duration(i+1) * 500 * time.Millisecond)
+	}
+	if lastErr != nil {
+		return nil, lastErr
+	}
+	return nil, fmt.Errorf("no speedtest servers found after %d attempts", maxRetries)
+}
+
+// findTargetServerWithRetry finds optimal target server with 3x retry and fallback
+func findTargetServerWithRetry(serverList speedtest.Servers, maxRetries int) (speedtest.Servers, error) {
+	var lastErr error
+	for i := 0; i < maxRetries; i++ {
+		targets, err := serverList.FindServer([]int{})
+		if err == nil && len(targets) > 0 {
+			return targets, nil
+		}
+		lastErr = err
+		time.Sleep(time.Duration(i+1) * 500 * time.Millisecond)
+	}
+
+	// Fallback to sorting by distance if FindServer fails
+	if len(serverList) > 0 {
+		sort.Slice(serverList, func(i, j int) bool {
+			return serverList[i].Distance < serverList[j].Distance
+		})
+		return speedtest.Servers{serverList[0]}, nil
+	}
+
+	return nil, fmt.Errorf("failed to select valid target server: %v", lastErr)
+}
+
 // FetchServerItems retrieves nearby servers for --list flag
 func FetchServerItems(r *model.Runner) ([]model.ServerItem, error) {
-	serverList, err := r.Client.FetchServers()
+	serverList, err := fetchServersWithRetry(r, 3)
 	if err != nil {
 		return nil, err
 	}
@@ -128,6 +189,7 @@ func FetchServerItems(r *model.Runner) ([]model.ServerItem, error) {
 			Sponsor:  s.Sponsor,
 			Name:     s.Name,
 			Country:  s.Country,
+			Host:     extractServerHost(s.Host, s.URL),
 			Distance: model.Round(s.Distance, 1),
 		}
 	}
@@ -165,10 +227,11 @@ func Run(r *model.Runner) (*model.TestResult, error) {
 		}
 	}
 
-	serverList, err := r.Client.FetchServers()
-	if err != nil || len(serverList) == 0 {
-		ui.FailSpinner(spUser, "Failed to retrieve test servers")
-		return nil, fmt.Errorf("no test servers available")
+	// Fetch servers with 3x retry
+	serverList, err := fetchServersWithRetry(r, 3)
+	if err != nil {
+		ui.FailSpinner(spUser, "Failed to retrieve test servers (after 3 retries)")
+		return nil, err
 	}
 
 	ui.StopSpinner(spUser, fmt.Sprintf("Connected : %s (%s) - IP: %s", clientInfo.ISP, clientInfo.Country, clientInfo.IP))
@@ -198,13 +261,18 @@ func Run(r *model.Runner) (*model.TestResult, error) {
 		spSearch := ui.NewSpinner("Selecting optimal test server (lowest latency)...", quiet)
 		ui.StartSpinner(spSearch)
 
-		targets, err := serverList.FindServer([]int{})
-		if err != nil || len(targets) == 0 {
-			ui.FailSpinner(spSearch, "Failed to select valid target server")
-			return nil, fmt.Errorf("no valid target server found")
+		targets, err := findTargetServerWithRetry(serverList, 3)
+		if err != nil {
+			ui.FailSpinner(spSearch, "Failed to select valid target server (after 3 retries)")
+			return nil, err
 		}
 		targetServers = targets
-		ui.StopSpinner(spSearch, fmt.Sprintf("Target server : %s (%s, %s)", targets[0].Sponsor, targets[0].Name, targets[0].Country))
+		srvHost := extractServerHost(targets[0].Host, targets[0].URL)
+		if srvHost != "" {
+			ui.StopSpinner(spSearch, fmt.Sprintf("Target server : %s (%s, %s) [ID: %s | Host/IP: %s]", targets[0].Sponsor, targets[0].Name, targets[0].Country, targets[0].ID, srvHost))
+		} else {
+			ui.StopSpinner(spSearch, fmt.Sprintf("Target server : %s (%s, %s) [ID: %s]", targets[0].Sponsor, targets[0].Name, targets[0].Country, targets[0].ID))
+		}
 	}
 
 	server := targetServers[0]
@@ -273,6 +341,7 @@ func Run(r *model.Runner) (*model.TestResult, error) {
 			Name:     server.Name,
 			Sponsor:  server.Sponsor,
 			Country:  server.Country,
+			Host:     extractServerHost(server.Host, server.URL),
 			Distance: model.Round(server.Distance, 2),
 			Latency:  model.Round(pingMs, 2),
 		},
