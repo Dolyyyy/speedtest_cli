@@ -2,6 +2,8 @@ package main
 
 import (
 	"fmt"
+	"io"
+	"log"
 	"os"
 
 	"github.com/Dolyyyy/speedtest_cli/pkg/config"
@@ -11,6 +13,11 @@ import (
 	"github.com/Dolyyyy/speedtest_cli/pkg/printer"
 	"github.com/Dolyyyy/speedtest_cli/pkg/ui"
 )
+
+func init() {
+	// Mute internal Go stdlib HTTP transport warning logs (e.g. Unsolicited response)
+	log.SetOutput(io.Discard)
+}
 
 func main() {
 	cfg := config.ParseFlags()

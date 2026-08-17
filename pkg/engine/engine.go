@@ -4,6 +4,8 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
+	"log"
 	"net"
 	"net/http"
 	"net/url"
@@ -16,6 +18,11 @@ import (
 	"github.com/Dolyyyy/speedtest_cli/pkg/ui"
 	"github.com/showwin/speedtest-go/speedtest"
 )
+
+func init() {
+	// Mute standard library HTTP transport debug logs
+	log.SetOutput(io.Discard)
+}
 
 type ipApiMeta struct {
 	Status      string `json:"status"`
