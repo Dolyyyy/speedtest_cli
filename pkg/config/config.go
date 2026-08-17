@@ -2,38 +2,45 @@ package config
 
 import (
 	"flag"
+	"os"
 
 	"github.com/Dolyyyy/speedtest_cli/pkg/model"
 )
 
-// ParseFlags parses command-line flags and constructs model.Config
+// ParseFlags parses os.Args and constructs model.Config
 func ParseFlags() *model.Config {
+	return ParseFlagsArgs(os.Args[1:])
+}
+
+// ParseFlagsArgs parses explicit argument slice and constructs model.Config
+func ParseFlagsArgs(args []string) *model.Config {
 	cfg := &model.Config{}
+	fs := flag.NewFlagSet("speedtest", flag.ContinueOnError)
 
-	flag.BoolVar(&cfg.ShowHelp, "h", false, "Display help guide")
-	flag.BoolVar(&cfg.ShowHelp, "help", false, "Display help guide")
+	fs.BoolVar(&cfg.ShowHelp, "h", false, "Display help guide")
+	fs.BoolVar(&cfg.ShowHelp, "help", false, "Display help guide")
 
-	flag.BoolVar(&cfg.ShowList, "l", false, "List nearest available speedtest servers")
-	flag.BoolVar(&cfg.ShowList, "list", false, "List nearest available speedtest servers")
+	fs.BoolVar(&cfg.ShowList, "l", false, "List nearest available speedtest servers")
+	fs.BoolVar(&cfg.ShowList, "list", false, "List nearest available speedtest servers")
 
-	flag.StringVar(&cfg.ServerID, "s", "", "Specify a target server ID")
-	flag.StringVar(&cfg.ServerID, "server", "", "Specify a target server ID")
+	fs.StringVar(&cfg.ServerID, "s", "", "Specify a target server ID")
+	fs.StringVar(&cfg.ServerID, "server", "", "Specify a target server ID")
 
-	flag.StringVar(&cfg.CustomHost, "custom", "", "Specify a custom speedtest server host (e.g. host:port)")
+	fs.StringVar(&cfg.CustomHost, "custom", "", "Specify a custom speedtest server host (e.g. host:port)")
 
-	flag.IntVar(&cfg.Threads, "t", 16, "Number of parallel TCP connections for high-speed link saturation (1-64)")
-	flag.IntVar(&cfg.Threads, "threads", 16, "Number of parallel TCP connections for high-speed link saturation (1-64)")
+	fs.IntVar(&cfg.Threads, "t", 16, "Number of parallel TCP connections for high-speed link saturation (1-64)")
+	fs.IntVar(&cfg.Threads, "threads", 16, "Number of parallel TCP connections for high-speed link saturation (1-64)")
 
-	flag.BoolVar(&cfg.UseBytes, "bytes", false, "Display speed in MB/s instead of Mbps")
+	fs.BoolVar(&cfg.UseBytes, "bytes", false, "Display speed in MB/s instead of Mbps")
 
-	flag.BoolVar(&cfg.UseJSON, "json", false, "Output results in JSON format")
+	fs.BoolVar(&cfg.UseJSON, "json", false, "Output results in JSON format")
 
-	flag.BoolVar(&cfg.UseSimple, "simple", false, "Output minimalist 3-line format")
+	fs.BoolVar(&cfg.UseSimple, "simple", false, "Output minimalist 3-line format")
 
-	flag.BoolVar(&cfg.ShowVersion, "v", false, "Show CLI version")
-	flag.BoolVar(&cfg.ShowVersion, "version", false, "Show CLI version")
+	fs.BoolVar(&cfg.ShowVersion, "v", false, "Show CLI version")
+	fs.BoolVar(&cfg.ShowVersion, "version", false, "Show CLI version")
 
-	flag.Parse()
+	_ = fs.Parse(args)
 
 	if cfg.Threads < 1 {
 		cfg.Threads = 1
