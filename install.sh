@@ -51,7 +51,7 @@ if [ -f "binaries/${BINARY_FILE}" ]; then
     echo "📦 Installing from local binary binaries/${BINARY_FILE}..."
     cp "binaries/${BINARY_FILE}" "$TARGET_PATH"
 else
-    DOWNLOAD_URL="https://github.com/${REPO}/raw/main/binaries/${BINARY_FILE}"
+    DOWNLOAD_URL="https://github.com/${REPO}/raw/main/binaries/${BINARY_FILE}?t=$(date +%s)"
     echo "📥 Downloading ${BINARY_FILE} from GitHub..."
     curl -fsSL "$DOWNLOAD_URL" -o "$TARGET_PATH"
 fi
