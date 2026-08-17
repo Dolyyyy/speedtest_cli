@@ -94,7 +94,7 @@ func Run100G(r *model.Runner) (*model.TestResult, error) {
 		threads = 32
 	}
 
-	spDL := ui.NewSpinner(fmt.Sprintf("Testing 100G download speed (%d parallel TCP streams)...", threads), quiet)
+	spDL := ui.NewSpinner(fmt.Sprintf("Testing download speed (%d parallel TCP streams)...", threads), quiet)
 	spDL.UseBytes = r.Cfg.UseBytes
 	spDL.Threads = threads
 	spDL.TestType = "download"
@@ -116,7 +116,7 @@ func Run100G(r *model.Runner) (*model.TestResult, error) {
 	ui.StopSpinner(spDL, fmt.Sprintf("Download : %s (%d streams)", dlSpeed.String(r.Cfg.UseBytes), threads))
 
 	// 4. Multi-stream unthrottled Upload
-	spUL := ui.NewSpinner(fmt.Sprintf("Testing 100G upload speed (%d parallel TCP streams)...", threads), quiet)
+	spUL := ui.NewSpinner(fmt.Sprintf("Testing upload speed (%d parallel TCP streams)...", threads), quiet)
 	spUL.UseBytes = r.Cfg.UseBytes
 	spUL.Threads = threads
 	spUL.TestType = "upload"
@@ -235,9 +235,11 @@ func runMultiStreamDownload(urlStr string, concurrency int, duration time.Durati
 	var wg sync.WaitGroup
 	startTime := time.Now()
 
-	// Periodic rate ticker for live UI updates
+	// Periodic rate ticker for live UI updates in Bytes Per Second
 	tickerDone := make(chan struct{})
 	go func() {
+		var lastBytes int64
+		var lastTime = time.Now()
 		ticker := time.NewTicker(100 * time.Millisecond)
 		defer ticker.Stop()
 		for {
@@ -245,11 +247,15 @@ func runMultiStreamDownload(urlStr string, concurrency int, duration time.Durati
 			case <-tickerDone:
 				return
 			case <-ticker.C:
-				elapsed := time.Since(startTime).Seconds()
-				if elapsed > 0.1 {
-					bytes := atomic.LoadInt64(totalBytes)
-					mbps := (float64(bytes) * 8.0) / (elapsed * 1e6)
-					rpt.Store(mbps)
+				now := time.Now()
+				curBytes := atomic.LoadInt64(totalBytes)
+				deltaBytes := curBytes - lastBytes
+				deltaTime := now.Sub(lastTime).Seconds()
+				if deltaTime > 0.05 {
+					bps := float64(deltaBytes) / deltaTime
+					rpt.Store(bps)
+					lastBytes = curBytes
+					lastTime = now
 				}
 			}
 		}
@@ -344,8 +350,11 @@ func runMultiStreamUpload(urlStr string, concurrency int, duration time.Duration
 	var wg sync.WaitGroup
 	startTime := time.Now()
 
+	// Periodic rate ticker for live UI updates in Bytes Per Second
 	tickerDone := make(chan struct{})
 	go func() {
+		var lastBytes int64
+		var lastTime = time.Now()
 		ticker := time.NewTicker(100 * time.Millisecond)
 		defer ticker.Stop()
 		for {
@@ -353,11 +362,15 @@ func runMultiStreamUpload(urlStr string, concurrency int, duration time.Duration
 			case <-tickerDone:
 				return
 			case <-ticker.C:
-				elapsed := time.Since(startTime).Seconds()
-				if elapsed > 0.1 {
-					bytes := atomic.LoadInt64(totalBytes)
-					mbps := (float64(bytes) * 8.0) / (elapsed * 1e6)
-					rpt.Store(mbps)
+				now := time.Now()
+				curBytes := atomic.LoadInt64(totalBytes)
+				deltaBytes := curBytes - lastBytes
+				deltaTime := now.Sub(lastTime).Seconds()
+				if deltaTime > 0.05 {
+					bps := float64(deltaBytes) / deltaTime
+					rpt.Store(bps)
+					lastBytes = curBytes
+					lastTime = now
 				}
 			}
 		}
