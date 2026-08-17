@@ -18,10 +18,11 @@ func PrintHeader(quiet bool) {
 	fmt.Println(color.CyanString(strings.Repeat("─", 48)))
 }
 
-// PrintHelp displays styled CLI help guide in English
+// PrintHelp displays styled CLI help guide in English with GitHub URL
 func PrintHelp() {
 	fmt.Println()
-	fmt.Printf("%s - High-Performance 10G/100G Capable Speedtest CLI in Go (v%s)\n\n", ColorTitle("⚡ speedtest_cli"), model.Version)
+	fmt.Printf("%s - High-Performance 10G/100G Capable Speedtest CLI in Go (v%s)\n", ColorTitle("⚡ speedtest_cli"), model.Version)
+	fmt.Printf("%s\n\n", ColorMuted("🔗 https://github.com/Dolyyyy/speedtest_cli"))
 	fmt.Printf("%s\n", ColorSuccess("USAGE:"))
 	fmt.Println("  speedtest [options]")
 	fmt.Println()

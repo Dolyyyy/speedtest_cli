@@ -8,7 +8,7 @@ import (
 	"github.com/fatih/color"
 )
 
-// PrintDashboard displays futuristic dashboard card in English
+// PrintDashboard displays futuristic dashboard card in English with GitHub URL
 func PrintDashboard(res *model.TestResult, useBytes bool) {
 	border := color.CyanString("┌────────────────────────────────────────────────────────┐")
 	sep := color.CyanString("├────────────────────────────────────────────────────────┤")
@@ -30,6 +30,8 @@ func PrintDashboard(res *model.TestResult, useBytes bool) {
 		fmt.Printf("│  📥 %s  %-39s │\n", ColorMuted("Download:"), ColorSuccess(fmt.Sprintf("%.2f Mbps", res.Download.Mbps)))
 		fmt.Printf("│  📤 %s  %-39s │\n", ColorMuted("Upload:  "), ColorWarning(fmt.Sprintf("%.2f Mbps", res.Upload.Mbps)))
 	}
+	fmt.Println(sep)
+	fmt.Printf("│  🔗 %-50s │\n", ColorMuted("https://github.com/Dolyyyy/speedtest_cli"))
 	fmt.Println(bottom)
 	fmt.Println()
 }
@@ -51,4 +53,5 @@ func PrintServerList(servers []model.ServerItem) {
 		fmt.Printf("%-8s %-25.25s %-20.20s %.1f km\n", s.ID, s.Sponsor, s.Name+" ("+s.Country+")", s.Distance)
 	}
 	fmt.Println()
+	fmt.Printf("%s\n\n", ColorMuted("🔗 https://github.com/Dolyyyy/speedtest_cli"))
 }
