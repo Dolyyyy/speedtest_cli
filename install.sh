@@ -5,6 +5,7 @@
 set -e
 
 echo "🚀 Installing speedtest_cli..."
+echo "🔗 Repo: https://github.com/Dolyyyy/speedtest_cli"
 
 # Detect OS and architecture
 OS=$(uname -s | tr '[:upper:]' '[:lower:]')
@@ -71,3 +72,5 @@ echo "Quick start:"
 echo "  speedtest          # Run full speedtest"
 echo "  speedtest --bytes  # Speed in MB/s"
 echo "  speedtest --help   # View all options"
+echo ""
+echo "🔗 Star us on GitHub: https://github.com/Dolyyyy/speedtest_cli"

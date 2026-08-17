@@ -4,6 +4,7 @@
 $ErrorActionPreference = "Stop"
 
 Write-Host "🚀 Installing speedtest_cli for Windows..." -ForegroundColor Cyan
+Write-Host "🔗 Repo: https://github.com/Dolyyyy/speedtest_cli" -ForegroundColor Gray
 
 $Url = "https://raw.githubusercontent.com/Dolyyyy/speedtest_cli/main/binaries/speedtest-windows-amd64.exe"
 $InstallDir = "$env:LOCALAPPDATA\Programs\speedtest"
@@ -26,3 +27,4 @@ if ($UserPath -notlike "*$InstallDir*") {
 
 Write-Host "`n✅ speedtest_cli installed successfully!" -ForegroundColor Green
 Write-Host "Please restart your PowerShell terminal and type 'speedtest' to run." -ForegroundColor White
+Write-Host "🔗 Star us on GitHub: https://github.com/Dolyyyy/speedtest_cli" -ForegroundColor Cyan
