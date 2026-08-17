@@ -248,6 +248,10 @@ func FetchServerItems(r *model.Runner) ([]model.ServerItem, error) {
 
 // Run executes complete benchmark workflow
 func Run(r *model.Runner) (*model.TestResult, error) {
+	if r.Cfg.Mode100G {
+		return Run100G(r)
+	}
+
 	quiet := r.Cfg.IsQuiet()
 	hostInfo := model.FetchHostInfo()
 

@@ -36,6 +36,10 @@ func ParseFlagsArgs(args []string) *model.Config {
 	fs.IntVar(&cfg.Threads, "t", 16, "Number of parallel TCP connections for 10G/50G/100G link saturation (1-128)")
 	fs.IntVar(&cfg.Threads, "threads", 16, "Number of parallel TCP connections for 10G/50G/100G link saturation (1-128)")
 
+	fs.BoolVar(&cfg.Mode100G, "100g", false, "Enable unthrottled 100G Datacenter Backbone benchmark mode")
+	fs.BoolVar(&cfg.Mode100G, "B", false, "Enable unthrottled 100G Datacenter Backbone benchmark mode")
+	fs.BoolVar(&cfg.Mode100G, "backbone", false, "Enable unthrottled 100G Datacenter Backbone benchmark mode")
+
 	fs.BoolVar(&cfg.UseBytes, "bytes", false, "Display speed in MB/s instead of Mbps")
 
 	fs.BoolVar(&cfg.UseJSON, "json", false, "Output results in JSON format")
