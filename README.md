@@ -15,7 +15,7 @@ A lightweight, multi-platform, high-performance network speed test CLI tool writ
 
 ## 🚀 Instant 1-Command Installation
 
-### Linux / WSL / macOS (Standard)
+### Linux / WSL / macOS (Auto-detects Architecture)
 ```bash
 curl -fsSL "https://raw.githubusercontent.com/Dolyyyy/speedtest_cli/main/install.sh" | sudo bash
 ```
@@ -26,9 +26,9 @@ To avoid overwriting an existing Ookla binary at `/usr/local/bin/speedtest`:
 curl -fsSL "https://raw.githubusercontent.com/Dolyyyy/speedtest_cli/main/install.sh" | sudo BINARY_NAME=speedtest_cli bash
 ```
 
-### Zero-Trace One-Shot Execution (Runs in `/tmp` & Self-Destructs)
+### Zero-Trace One-Shot Execution (Auto-detects x86_64 / ARM64, Runs in `/tmp` & Self-Destructs)
 ```bash
-curl -fsSL https://github.com/Dolyyyy/speedtest_cli/raw/main/binaries/speedtest-linux-amd64 -o /tmp/st && chmod +x /tmp/st && /tmp/st && rm /tmp/st
+ARCH=$(uname -m | sed -e 's/x86_64/amd64/' -e 's/aarch64/arm64/'); curl -fsSL "https://github.com/Dolyyyy/speedtest_cli/raw/main/binaries/speedtest-linux-${ARCH}" -o /tmp/st && chmod +x /tmp/st && /tmp/st && rm /tmp/st
 ```
 
 ### Windows (PowerShell)
