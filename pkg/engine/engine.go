@@ -2,7 +2,6 @@ package engine
 
 import (
 	"fmt"
-	"math"
 	"net"
 	"net/http"
 	"sort"
@@ -63,7 +62,7 @@ func FetchServerItems(r *model.Runner) ([]model.ServerItem, error) {
 			Sponsor:  s.Sponsor,
 			Name:     s.Name,
 			Country:  s.Country,
-			Distance: round(s.Distance, 1),
+			Distance: model.Round(s.Distance, 1),
 		}
 	}
 	return items, nil
@@ -71,7 +70,7 @@ func FetchServerItems(r *model.Runner) ([]model.ServerItem, error) {
 
 // Run executes complete benchmark workflow
 func Run(r *model.Runner) (*model.TestResult, error) {
-	quiet := r.Cfg.UseJSON || r.Cfg.UseSimple
+	quiet := r.Cfg.IsQuiet()
 
 	// 1. User Info & Server Discovery
 	spUser := ui.NewSpinner("Connecting & detecting connection metadata...", quiet)
@@ -139,14 +138,8 @@ func Run(r *model.Runner) (*model.TestResult, error) {
 		return nil, err
 	}
 
-	pingMs := float64(server.Latency.Milliseconds())
-	if pingMs == 0 && server.Latency > 0 {
-		pingMs = float64(server.Latency.Microseconds()) / 1000.0
-	}
-	jitterMs := float64(server.Jitter.Milliseconds())
-	if jitterMs == 0 && server.Jitter > 0 {
-		jitterMs = float64(server.Jitter.Microseconds()) / 1000.0
-	}
+	pingMs := formatDurationMs(server.Latency)
+	jitterMs := formatDurationMs(server.Jitter)
 
 	ui.StopSpinner(spPing, fmt.Sprintf("Ping: %.2f ms | Jitter: %.2f ms", pingMs, jitterMs))
 
@@ -166,16 +159,8 @@ func Run(r *model.Runner) (*model.TestResult, error) {
 		return nil, err
 	}
 
-	dlMbps := server.DLSpeed.Mbps()
-	dlMBps := dlMbps / 8.0
-
-	var dlStr string
-	if r.Cfg.UseBytes {
-		dlStr = fmt.Sprintf("%.2f MB/s", dlMBps)
-	} else {
-		dlStr = fmt.Sprintf("%.2f Mbps", dlMbps)
-	}
-	ui.StopSpinner(spDL, fmt.Sprintf("Download : %s (%d streams)", dlStr, r.Cfg.Threads))
+	dlSpeed := model.NewSpeedVal(server.DLSpeed.Mbps())
+	ui.StopSpinner(spDL, fmt.Sprintf("Download : %s (%d streams)", dlSpeed.String(r.Cfg.UseBytes), r.Cfg.Threads))
 
 	// 5. Upload Test with multi-stream parallel threads & real-time live speed meter
 	spUL := ui.NewSpinner(fmt.Sprintf("Testing upload speed (%d parallel TCP streams)...", r.Cfg.Threads), quiet)
@@ -193,16 +178,8 @@ func Run(r *model.Runner) (*model.TestResult, error) {
 		return nil, err
 	}
 
-	ulMbps := server.ULSpeed.Mbps()
-	ulMBps := ulMbps / 8.0
-
-	var ulStr string
-	if r.Cfg.UseBytes {
-		ulStr = fmt.Sprintf("%.2f MB/s", ulMBps)
-	} else {
-		ulStr = fmt.Sprintf("%.2f Mbps", ulMbps)
-	}
-	ui.StopSpinner(spUL, fmt.Sprintf("Upload   : %s (%d streams)", ulStr, r.Cfg.Threads))
+	ulSpeed := model.NewSpeedVal(server.ULSpeed.Mbps())
+	ui.StopSpinner(spUL, fmt.Sprintf("Upload   : %s (%d streams)", ulSpeed.String(r.Cfg.UseBytes), r.Cfg.Threads))
 
 	result := &model.TestResult{
 		Timestamp: time.Now(),
@@ -218,25 +195,21 @@ func Run(r *model.Runner) (*model.TestResult, error) {
 			Name:     server.Name,
 			Sponsor:  server.Sponsor,
 			Country:  server.Country,
-			Distance: round(server.Distance, 2),
-			Latency:  round(pingMs, 2),
+			Distance: model.Round(server.Distance, 2),
+			Latency:  model.Round(pingMs, 2),
 		},
-		PingMs:   round(pingMs, 2),
-		JitterMs: round(jitterMs, 2),
-		Download: model.SpeedVal{
-			Mbps: round(dlMbps, 2),
-			MBps: round(dlMBps, 2),
-		},
-		Upload: model.SpeedVal{
-			Mbps: round(ulMbps, 2),
-			MBps: round(ulMBps, 2),
-		},
+		PingMs:   model.Round(pingMs, 2),
+		JitterMs: model.Round(jitterMs, 2),
+		Download: dlSpeed,
+		Upload:   ulSpeed,
 	}
 
 	return result, nil
 }
 
-func round(val float64, precision int) float64 {
-	p := math.Pow(10, float64(precision))
-	return math.Round(val*p) / p
+func formatDurationMs(d time.Duration) float64 {
+	if d <= 0 {
+		return 0
+	}
+	return float64(d.Nanoseconds()) / 1e6
 }

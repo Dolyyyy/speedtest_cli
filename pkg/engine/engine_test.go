@@ -2,6 +2,7 @@ package engine
 
 import (
 	"testing"
+	"time"
 
 	"github.com/Dolyyyy/speedtest_cli/pkg/model"
 )
@@ -21,9 +22,10 @@ func TestNewRunner(t *testing.T) {
 	}
 }
 
-func TestRound(t *testing.T) {
-	val := round(12.34567, 2)
-	if val != 12.35 {
-		t.Errorf("expected rounded value 12.35, got %f", val)
+func TestFormatDurationMs(t *testing.T) {
+	d := 15500 * time.Microsecond // 15.5 ms
+	ms := formatDurationMs(d)
+	if ms != 15.5 {
+		t.Errorf("expected 15.5 ms, got %f", ms)
 	}
 }
