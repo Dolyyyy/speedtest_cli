@@ -28,11 +28,16 @@ func TestJSONResultSerialization(t *testing.T) {
 	res := TestResult{
 		Timestamp: time.Now(),
 		Host: HostInfo{
-			Hostname: "test-server",
-			OS:       "linux",
-			Arch:     "amd64",
-			CPUCores: 8,
-			TotalRAM: "16.0 GB",
+			Hostname:  "test-server",
+			OS:        "linux",
+			Arch:      "amd64",
+			CPUCores:  8,
+			TotalRAM:  "16.0 GB",
+			AvailRAM:  "12.5 GB",
+			LocalIP:   "192.168.1.100",
+			Interface: "eth0",
+			LoadAvg:   "0.15, 0.10, 0.05",
+			GoVersion: "go1.23.0",
 		},
 		Client: ClientInfo{
 			IP:      "1.2.3.4",
@@ -70,8 +75,8 @@ func TestJSONResultSerialization(t *testing.T) {
 		t.Fatalf("failed to unmarshal TestResult: %v", err)
 	}
 
-	if unmarshaled.Host.Hostname != "test-server" {
-		t.Errorf("expected host hostname test-server, got %s", unmarshaled.Host.Hostname)
+	if unmarshaled.Host.LocalIP != "192.168.1.100" {
+		t.Errorf("expected local IP 192.168.1.100, got %s", unmarshaled.Host.LocalIP)
 	}
 	if unmarshaled.Client.IP != "1.2.3.4" {
 		t.Errorf("expected client IP 1.2.3.4, got %s", unmarshaled.Client.IP)
