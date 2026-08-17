@@ -1,44 +1,33 @@
-#!/bin/bash
-# speedtest_cli - Multi-architecture installer
-# Usage: curl -fsSL https://raw.githubusercontent.com/Dolyyyy/speedtest_cli/main/install.sh | sudo bash
-
+#!/usr/bin/env bash
 set -e
 
-echo "🚀 Installing speedtest_cli..."
-echo "🔗 Repo: https://github.com/Dolyyyy/speedtest_cli"
+REPO="Dolyyyy/speedtest_cli"
+INSTALL_DIR="/usr/local/bin"
+BINARY_NAME="${BINARY_NAME:-speedtest}"
 
-# Detect OS and architecture
-OS=$(uname -s | tr '[:upper:]' '[:lower:]')
-ARCH=$(uname -m)
+# Detect OS and Architecture
+OS="$(uname -s | tr '[:upper:]' '[:lower:]')"
+ARCH="$(uname -m)"
+
+case "$ARCH" in
+    x86_64|amd64)
+        ARCH="amd64"
+        ;;
+    aarch64|arm64)
+        ARCH="arm64"
+        ;;
+    *)
+        echo "❌ Unsupported architecture: $ARCH"
+        exit 1
+        ;;
+esac
 
 case "$OS" in
     linux)
-        case "$ARCH" in
-            x86_64)
-                BINARY="speedtest-linux-amd64"
-                ;;
-            aarch64|arm64)
-                BINARY="speedtest-linux-arm64"
-                ;;
-            *)
-                echo "❌ Unsupported architecture: $ARCH"
-                exit 1
-                ;;
-        esac
+        BINARY_FILE="speedtest-linux-${ARCH}"
         ;;
     darwin)
-        case "$ARCH" in
-            x86_64)
-                BINARY="speedtest-darwin-amd64"
-                ;;
-            arm64)
-                BINARY="speedtest-darwin-arm64"
-                ;;
-            *)
-                echo "❌ Unsupported architecture: $ARCH"
-                exit 1
-                ;;
-        esac
+        BINARY_FILE="speedtest-darwin-${ARCH}"
         ;;
     *)
         echo "❌ Unsupported operating system: $OS"
@@ -46,31 +35,34 @@ case "$OS" in
         ;;
 esac
 
-TARGET_DIR="/usr/local/bin"
-if [ ! -w "$TARGET_DIR" ] && [ "$EUID" -ne 0 ]; then
-    TARGET_DIR="$HOME/.local/bin"
-    mkdir -p "$TARGET_DIR"
+# Fallback to local user bin directory if /usr/local/bin is not writable
+if [ "$EUID" -ne 0 ] && [ ! -w "$INSTALL_DIR" ]; then
+    INSTALL_DIR="$HOME/.local/bin"
+    mkdir -p "$INSTALL_DIR"
 fi
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" 2>/dev/null && pwd || true)"
+TARGET_PATH="${INSTALL_DIR}/${BINARY_NAME}"
 
-rm -f "$TARGET_DIR/speedtest" 2>/dev/null || true
+echo "🚀 Installing speedtest_cli..."
+echo "🔗 Repo: https://github.com/${REPO}"
 
-if [ -n "$SCRIPT_DIR" ] && [ -f "$SCRIPT_DIR/binaries/$BINARY" ]; then
-    echo "📦 Installing from local binary binaries/$BINARY..."
-    cp "$SCRIPT_DIR/binaries/$BINARY" "$TARGET_DIR/speedtest"
+# Check for local binary first (during development / testing)
+if [ -f "binaries/${BINARY_FILE}" ]; then
+    echo "📦 Installing from local binary binaries/${BINARY_FILE}..."
+    cp "binaries/${BINARY_FILE}" "$TARGET_PATH"
 else
-    echo "📥 Downloading $BINARY from GitHub..."
-    curl -fsSL "https://raw.githubusercontent.com/Dolyyyy/speedtest_cli/main/binaries/$BINARY?t=$(date +%s)" -o "$TARGET_DIR/speedtest"
+    DOWNLOAD_URL="https://github.com/${REPO}/raw/main/binaries/${BINARY_FILE}"
+    echo "📥 Downloading ${BINARY_FILE} from GitHub..."
+    curl -fsSL "$DOWNLOAD_URL" -o "$TARGET_PATH"
 fi
 
-chmod +x "$TARGET_DIR/speedtest"
+chmod +x "$TARGET_PATH"
 
-echo "✅ speedtest_cli installed successfully to $TARGET_DIR/speedtest!"
+echo "✅ speedtest_cli installed successfully to ${TARGET_PATH}!"
 echo ""
 echo "Quick start:"
-echo "  speedtest          # Run full speedtest"
-echo "  speedtest --bytes  # Speed in MB/s"
-echo "  speedtest --help   # View all options"
+echo "  ${BINARY_NAME}          # Run full speedtest"
+echo "  ${BINARY_NAME} --bytes  # Speed in MB/s"
+echo "  ${BINARY_NAME} --help   # View all options"
 echo ""
-echo "🔗 Star us on GitHub: https://github.com/Dolyyyy/speedtest_cli"
+echo "🔗 Star us on GitHub: https://github.com/${REPO}"
