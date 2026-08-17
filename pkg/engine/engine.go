@@ -32,6 +32,18 @@ type ipApiMeta struct {
 	Query       string `json:"query"`
 }
 
+// isTier1Sponsor checks if a speedtest sponsor is a recognized high-capacity Tier-1 datacenter provider
+func isTier1Sponsor(sponsor string) bool {
+	lower := strings.ToLower(sponsor)
+	tier1 := []string{"scaleway", "adkynet", "milkywan", "orange", "bouygues", "free", "clouvider", "ovh", "online sas", "gsl networks", "wobcom"}
+	for _, t := range tier1 {
+		if strings.Contains(lower, t) {
+			return true
+		}
+	}
+	return false
+}
+
 // NewRunner initializes a Runner instance with tuned high-throughput network parameters
 func NewRunner(cfg *model.Config) *model.Runner {
 	// Force IPv4 tcp4 DialContext with fallback to dual-stack if tcp4 is unavailable
@@ -168,8 +180,21 @@ func fetchServersWithRetry(r *model.Runner, maxRetries int) (speedtest.Servers, 
 	return nil, fmt.Errorf("no speedtest servers found after %d attempts", maxRetries)
 }
 
-// findTargetServerWithRetry finds optimal target server with 3x retry and fallback
+// findTargetServerWithRetry finds optimal target server with Tier-1 datacenter prioritization and 3x retry
 func findTargetServerWithRetry(serverList speedtest.Servers, maxRetries int) (speedtest.Servers, error) {
+	// Sort server list by physical proximity, with bonus prioritization for high-capacity Tier-1 datacenter sponsors
+	sort.Slice(serverList, func(i, j int) bool {
+		t1I := isTier1Sponsor(serverList[i].Sponsor)
+		t1J := isTier1Sponsor(serverList[j].Sponsor)
+		if t1I && !t1J && serverList[i].Distance < serverList[j].Distance+50 {
+			return true
+		}
+		if !t1I && t1J && serverList[j].Distance < serverList[i].Distance+50 {
+			return false
+		}
+		return serverList[i].Distance < serverList[j].Distance
+	})
+
 	var lastErr error
 	for i := 0; i < maxRetries; i++ {
 		targets, err := serverList.FindServer([]int{})
@@ -180,11 +205,8 @@ func findTargetServerWithRetry(serverList speedtest.Servers, maxRetries int) (sp
 		time.Sleep(time.Duration(i+1) * 500 * time.Millisecond)
 	}
 
-	// Fallback to sorting by distance if FindServer fails
+	// Fallback to top sorted server if FindServer probes fail
 	if len(serverList) > 0 {
-		sort.Slice(serverList, func(i, j int) bool {
-			return serverList[i].Distance < serverList[j].Distance
-		})
 		return speedtest.Servers{serverList[0]}, nil
 	}
 
@@ -199,6 +221,14 @@ func FetchServerItems(r *model.Runner) ([]model.ServerItem, error) {
 	}
 
 	sort.Slice(serverList, func(i, j int) bool {
+		t1I := isTier1Sponsor(serverList[i].Sponsor)
+		t1J := isTier1Sponsor(serverList[j].Sponsor)
+		if t1I && !t1J && serverList[i].Distance < serverList[j].Distance+50 {
+			return true
+		}
+		if !t1I && t1J && serverList[j].Distance < serverList[i].Distance+50 {
+			return false
+		}
 		return serverList[i].Distance < serverList[j].Distance
 	})
 
