@@ -38,20 +38,33 @@ func NewRunner(cfg *model.Config) *model.Runner {
 			// Attempt IPv4 connection first
 			conn, err := dialer.DialContext(ctx, "tcp4", addr)
 			if err == nil {
+				if tcpConn, ok := conn.(*net.TCPConn); ok {
+					_ = tcpConn.SetReadBuffer(2 * 1024 * 1024)
+					_ = tcpConn.SetWriteBuffer(2 * 1024 * 1024)
+					_ = tcpConn.SetNoDelay(true)
+				}
 				return conn, nil
 			}
 			// Fallback to standard network if tcp4 unavailable (IPv6-only host)
-			return dialer.DialContext(ctx, network, addr)
+			fallbackConn, errFallback := dialer.DialContext(ctx, network, addr)
+			if errFallback == nil {
+				if tcpConn, ok := fallbackConn.(*net.TCPConn); ok {
+					_ = tcpConn.SetReadBuffer(2 * 1024 * 1024)
+					_ = tcpConn.SetWriteBuffer(2 * 1024 * 1024)
+					_ = tcpConn.SetNoDelay(true)
+				}
+			}
+			return fallbackConn, errFallback
 		},
 		ForceAttemptHTTP2:     true,
-		MaxIdleConns:          1000,
-		MaxIdleConnsPerHost:   500,
-		MaxConnsPerHost:       500,
+		MaxIdleConns:          2000,
+		MaxIdleConnsPerHost:   1000,
+		MaxConnsPerHost:       1000,
 		IdleConnTimeout:       90 * time.Second,
 		TLSHandshakeTimeout:   10 * time.Second,
 		ExpectContinueTimeout: 1 * time.Second,
-		ReadBufferSize:        256 * 1024, // 256 KB TCP buffer
-		WriteBufferSize:       256 * 1024, // 256 KB TCP buffer
+		ReadBufferSize:        2 * 1024 * 1024, // 2 MB TCP buffer
+		WriteBufferSize:       2 * 1024 * 1024, // 2 MB TCP buffer
 	}
 
 	userConfig := &speedtest.UserConfig{
