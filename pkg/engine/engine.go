@@ -1,11 +1,14 @@
 package engine
 
 import (
+	"context"
+	"encoding/json"
 	"fmt"
 	"net"
 	"net/http"
 	"sort"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/Dolyyyy/speedtest_cli/pkg/model"
@@ -13,15 +16,32 @@ import (
 	"github.com/showwin/speedtest-go/speedtest"
 )
 
+type ipApiMeta struct {
+	Status      string `json:"status"`
+	CountryCode string `json:"countryCode"`
+	ISP         string `json:"isp"`
+	Org         string `json:"org"`
+	Query       string `json:"query"`
+}
+
 // NewRunner initializes a Runner instance with tuned high-throughput network parameters
 func NewRunner(cfg *model.Config) *model.Runner {
-	// High-throughput TCP Transport for 10G / 25G / 100G interfaces
+	// Force IPv4 tcp4 DialContext with fallback to dual-stack if tcp4 is unavailable
 	transport := &http.Transport{
 		Proxy: http.ProxyFromEnvironment,
-		DialContext: (&net.Dialer{
-			Timeout:   30 * time.Second,
-			KeepAlive: 30 * time.Second,
-		}).DialContext,
+		DialContext: func(ctx context.Context, network, addr string) (net.Conn, error) {
+			dialer := &net.Dialer{
+				Timeout:   30 * time.Second,
+				KeepAlive: 30 * time.Second,
+			}
+			// Attempt IPv4 connection first
+			conn, err := dialer.DialContext(ctx, "tcp4", addr)
+			if err == nil {
+				return conn, nil
+			}
+			// Fallback to standard network if tcp4 unavailable (IPv6-only host)
+			return dialer.DialContext(ctx, network, addr)
+		},
 		ForceAttemptHTTP2:     true,
 		MaxIdleConns:          1000,
 		MaxIdleConnsPerHost:   500,
@@ -42,6 +62,52 @@ func NewRunner(cfg *model.Config) *model.Runner {
 		Cfg:    cfg,
 		Client: speedtest.New(speedtest.WithUserConfig(userConfig)),
 	}
+}
+
+// fetchIPv4ClientInfo fetches accurate IPv4 address and ISP details
+func fetchIPv4ClientInfo() (*model.ClientInfo, error) {
+	client := &http.Client{
+		Timeout: 4 * time.Second,
+		Transport: &http.Transport{
+			DialContext: func(ctx context.Context, network, addr string) (net.Conn, error) {
+				return (&net.Dialer{Timeout: 3 * time.Second}).DialContext(ctx, "tcp4", addr)
+			},
+		},
+	}
+
+	resp, err := client.Get("http://ip-api.com/json")
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	var meta ipApiMeta
+	if err := json.NewDecoder(resp.Body).Decode(&meta); err != nil || meta.Status != "success" {
+		return nil, fmt.Errorf("invalid response")
+	}
+
+	isp := meta.ISP
+	if meta.Org != "" && !strings.Contains(meta.ISP, meta.Org) {
+		isp = meta.ISP + " (" + meta.Org + ")"
+	}
+	
+	// Normalize common French ISP names for clean display
+	lowerIsp := strings.ToLower(isp)
+	if strings.Contains(lowerIsp, "orange") {
+		isp = "Orange"
+	} else if strings.Contains(lowerIsp, "sfr") {
+		isp = "SFR"
+	} else if strings.Contains(lowerIsp, "free") {
+		isp = "Free"
+	} else if strings.Contains(lowerIsp, "bouygues") {
+		isp = "Bouygues Telecom"
+	}
+
+	return &model.ClientInfo{
+		IP:      meta.Query,
+		ISP:     isp,
+		Country: meta.CountryCode,
+	}, nil
 }
 
 // FetchServerItems retrieves nearby servers for --list flag
@@ -72,14 +138,30 @@ func FetchServerItems(r *model.Runner) ([]model.ServerItem, error) {
 func Run(r *model.Runner) (*model.TestResult, error) {
 	quiet := r.Cfg.IsQuiet()
 
-	// 1. User Info & Server Discovery
-	spUser := ui.NewSpinner("Connecting & detecting connection metadata...", quiet)
+	// 1. User Info & Server Discovery (IPv4 Priority)
+	spUser := ui.NewSpinner("Connecting & detecting connection metadata (IPv4 preference)...", quiet)
 	ui.StartSpinner(spUser)
 
-	user, err := r.Client.FetchUserInfo()
-	if err != nil {
-		ui.FailSpinner(spUser, "Failed to retrieve connection information")
-		return nil, err
+	var clientInfo model.ClientInfo
+
+	// Attempt IPv4 metadata lookup first
+	v4Info, errV4 := fetchIPv4ClientInfo()
+	if errV4 == nil && v4Info != nil && v4Info.IP != "" {
+		clientInfo = *v4Info
+	} else {
+		// Fallback to speedtest.FetchUserInfo()
+		user, err := r.Client.FetchUserInfo()
+		if err != nil {
+			ui.FailSpinner(spUser, "Failed to retrieve connection information")
+			return nil, err
+		}
+		clientInfo = model.ClientInfo{
+			IP:      user.IP,
+			ISP:     user.Isp,
+			Country: user.Country,
+			Lat:     user.Lat,
+			Lon:     user.Lon,
+		}
 	}
 
 	serverList, err := r.Client.FetchServers()
@@ -88,7 +170,7 @@ func Run(r *model.Runner) (*model.TestResult, error) {
 		return nil, fmt.Errorf("no test servers available")
 	}
 
-	ui.StopSpinner(spUser, fmt.Sprintf("Connected : %s (%s) - IP: %s", user.Isp, user.Country, user.IP))
+	ui.StopSpinner(spUser, fmt.Sprintf("Connected : %s (%s) - IP: %s", clientInfo.ISP, clientInfo.Country, clientInfo.IP))
 
 	// 2. Target Server Selection
 	var targetServers speedtest.Servers
@@ -183,13 +265,7 @@ func Run(r *model.Runner) (*model.TestResult, error) {
 
 	result := &model.TestResult{
 		Timestamp: time.Now(),
-		Client: model.ClientInfo{
-			IP:      user.IP,
-			ISP:     user.Isp,
-			Country: user.Country,
-			Lat:     user.Lat,
-			Lon:     user.Lon,
-		},
+		Client:    clientInfo,
 		Server: model.ServerInfo{
 			ID:       server.ID,
 			Name:     server.Name,
