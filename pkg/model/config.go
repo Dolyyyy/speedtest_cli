@@ -12,3 +12,8 @@ type Config struct {
 	UseSimple   bool
 	ShowVersion bool
 }
+
+// IsQuiet returns true if non-interactive output mode is selected (JSON or Simple)
+func (c *Config) IsQuiet() bool {
+	return c.UseJSON || c.UseSimple
+}
