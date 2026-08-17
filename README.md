@@ -7,34 +7,31 @@
 [![License](https://img.shields.io/badge/License-MIT-blue.svg?style=for-the-badge)](LICENSE)
 [![Open Source](https://img.shields.io/badge/Open_Source-%E2%9D%A4-red?style=for-the-badge)](https://github.com/Dolyyyy/speedtest_cli)
 
-A lightweight, multi-platform, high-performance network speed test CLI tool written in **Go**. Features a modern color terminal interface, automatic server discovery with 3x retry resilience, 10G/50G/100G multi-stream TCP saturation, zero-dependency host diagnostics, local benchmark history, and structured JSON output.
+A lightweight, multi-platform, high-performance network speed test CLI tool written in **Go**. Features a modern color terminal interface, unthrottled 100G Datacenter Backbone mode, automatic server discovery with 3x retry resilience, 10G/50G/100G multi-stream TCP saturation, zero-dependency host diagnostics, local benchmark history, and structured JSON output.
 
 🔗 **Repository:** [https://github.com/Dolyyyy/speedtest_cli](https://github.com/Dolyyyy/speedtest_cli)
 
 ---
 
-## 🚀 Instant 1-Command Installation
+## 🚀 Quick Start (1-Line Commands)
 
-### Linux / WSL / macOS (Auto-detects Architecture)
+### 📦 Install on System (Linux / macOS / WSL)
 ```bash
-curl -fsSL "https://raw.githubusercontent.com/Dolyyyy/speedtest_cli/main/install.sh" | sudo bash
+curl -fsSL https://raw.githubusercontent.com/Dolyyyy/speedtest_cli/main/install.sh | bash
 ```
 
-### Install under a Custom Name (e.g. `speedtest_cli`)
-To avoid overwriting an existing Ookla binary at `/usr/local/bin/speedtest`:
+### ⚡ Run Instantly without Installing (Zero-Trace)
 ```bash
-curl -fsSL "https://raw.githubusercontent.com/Dolyyyy/speedtest_cli/main/install.sh" | sudo BINARY_NAME=speedtest_cli bash
+curl -fsSL https://raw.githubusercontent.com/Dolyyyy/speedtest_cli/main/run.sh | bash
 ```
 
-### Zero-Trace One-Shot Execution (Auto-detects x86_64 / ARM64, Runs in `/tmp` & Self-Destructs)
-```bash
-ARCH=$(uname -m | sed -e 's/x86_64/amd64/' -e 's/aarch64/arm64/'); curl -fsSL "https://github.com/Dolyyyy/speedtest_cli/raw/main/binaries/speedtest-linux-${ARCH}" -o /tmp/st && chmod +x /tmp/st && /tmp/st && rm /tmp/st
-```
-
-### Windows (PowerShell)
+### 🪟 Windows (PowerShell)
 ```powershell
-iwr -useb "https://raw.githubusercontent.com/Dolyyyy/speedtest_cli/main/install.ps1" | iex
+irm https://raw.githubusercontent.com/Dolyyyy/speedtest_cli/main/install.ps1 | iex
 ```
+
+> **Tip (Custom Name):** To install without overwriting an existing Ookla binary:  
+> `curl -fsSL https://raw.githubusercontent.com/Dolyyyy/speedtest_cli/main/install.sh | BINARY_NAME=speedtest_cli bash`
 
 ---
 
@@ -75,6 +72,9 @@ iwr -useb "https://raw.githubusercontent.com/Dolyyyy/speedtest_cli/main/install.
 # Default: Fast auto-benchmarking (16 parallel TCP streams)
 speedtest
 
+# 100G Backbone Mode: Benchmark unthrottled 100G Datacenter Backbones
+speedtest --100g
+
 # High-Bandwidth: Maximize multi-stream saturation for 10G / 50G / 100G links
 speedtest --threads 64
 
@@ -107,6 +107,7 @@ speedtest --simple
 | Flag | Short | Description |
 | :--- | :--- | :--- |
 | `--help` | `-h` | Display interactive CLI help guide |
+| `--100g` | `-B` | Enable unthrottled 100G Datacenter Backbone benchmark mode |
 | `--history` | `-H` | Display local benchmark history table |
 | `--clear-history` | | Clear all saved local benchmark history records |
 | `--threads <N>` | `-t <N>` | Number of parallel TCP streams for 10G/50G/100G links (1-128, default: 16) |
@@ -170,11 +171,12 @@ speedtest --simple
 ## ⚡ Core Architecture & Engineering
 
 - **Zero External Dependencies**: Pure Go with stdlib metrics for CPU, RAM, OS, Kernel, and network interfaces.
+- **100G Backbone Engine**: Multi-stream zero-copy workers targeting unthrottled datacenter backbones.
 - **10G/50G/100G Socket Optimization**: 4MB TCP socket read/write buffers, `TCP_NODELAY`, and configurable multi-stream concurrency up to 128 threads.
 - **Strict Domain Layer Separation**: 100% of data structures and domain models reside in `pkg/model/`.
 - **Strategy Pattern Formatter**: Clean polymorphic rendering engine in `pkg/printer/` supporting TUI, JSON, and Simple formats.
 - **Resilient Discovery & Latency Fallback**: 3x retry loop with exponential backoff on server discovery and latency measurement.
-- **Ultra Lightweight**: Single static CGO-free binary (~5.9 MB) with near-instant execution.
+- **Ultra Lightweight**: Single static CGO-free binary (~6.0 MB) with near-instant execution.
 
 ---
 
@@ -186,7 +188,7 @@ speedtest_cli/
 │   └── speedtest/         # Binary CLI entrypoint
 ├── pkg/
 │   ├── config/            # CLI configuration & flag argument parsing
-│   ├── engine/            # Speedtest execution engine & 10G/100G runner
+│   ├── engine/            # Speedtest execution engine, 100G runner & Tier-1 discovery
 │   ├── history/           # Local benchmark history storage (~/.speedtest_history.json)
 │   ├── model/             # Domain models (Host, Client, Server, Speed, Result, Config, Spinner, Version)
 │   ├── printer/           # Strategy pattern output formatters (TUI, JSON, Simple)
@@ -196,6 +198,7 @@ speedtest_cli/
 │   └── workflows/ci.yml   # Multi-platform GitHub Actions CI matrix
 ├── build.sh               # Cross-platform compilation script
 ├── install.sh             # Linux/WSL/macOS 1-liner installer
+├── run.sh                 # Zero-trace 1-liner runner
 ├── install.ps1            # Windows PowerShell 1-liner installer
 ├── CONTRIBUTING.md        # Contribution guidelines
 ├── LICENSE                # MIT License
