@@ -39,8 +39,8 @@ func NewRunner(cfg *model.Config) *model.Runner {
 			conn, err := dialer.DialContext(ctx, "tcp4", addr)
 			if err == nil {
 				if tcpConn, ok := conn.(*net.TCPConn); ok {
-					_ = tcpConn.SetReadBuffer(2 * 1024 * 1024)
-					_ = tcpConn.SetWriteBuffer(2 * 1024 * 1024)
+					_ = tcpConn.SetReadBuffer(4 * 1024 * 1024)
+					_ = tcpConn.SetWriteBuffer(4 * 1024 * 1024)
 					_ = tcpConn.SetNoDelay(true)
 				}
 				return conn, nil
@@ -49,22 +49,22 @@ func NewRunner(cfg *model.Config) *model.Runner {
 			fallbackConn, errFallback := dialer.DialContext(ctx, network, addr)
 			if errFallback == nil {
 				if tcpConn, ok := fallbackConn.(*net.TCPConn); ok {
-					_ = tcpConn.SetReadBuffer(2 * 1024 * 1024)
-					_ = tcpConn.SetWriteBuffer(2 * 1024 * 1024)
+					_ = tcpConn.SetReadBuffer(4 * 1024 * 1024)
+					_ = tcpConn.SetWriteBuffer(4 * 1024 * 1024)
 					_ = tcpConn.SetNoDelay(true)
 				}
 			}
 			return fallbackConn, errFallback
 		},
 		ForceAttemptHTTP2:     true,
-		MaxIdleConns:          2000,
-		MaxIdleConnsPerHost:   1000,
-		MaxConnsPerHost:       1000,
+		MaxIdleConns:          4000,
+		MaxIdleConnsPerHost:   2000,
+		MaxConnsPerHost:       2000,
 		IdleConnTimeout:       90 * time.Second,
 		TLSHandshakeTimeout:   10 * time.Second,
 		ExpectContinueTimeout: 1 * time.Second,
-		ReadBufferSize:        2 * 1024 * 1024, // 2 MB TCP buffer
-		WriteBufferSize:       2 * 1024 * 1024, // 2 MB TCP buffer
+		ReadBufferSize:        4 * 1024 * 1024, // 4 MB TCP buffer for 50G/100G links
+		WriteBufferSize:       4 * 1024 * 1024, // 4 MB TCP buffer for 50G/100G links
 	}
 
 	userConfig := &speedtest.UserConfig{

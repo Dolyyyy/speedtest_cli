@@ -33,8 +33,8 @@ func ParseFlagsArgs(args []string) *model.Config {
 
 	fs.StringVar(&cfg.CustomHost, "custom", "", "Specify a custom speedtest server host (e.g. host:port)")
 
-	fs.IntVar(&cfg.Threads, "t", 16, "Number of parallel TCP connections for high-speed link saturation (1-64)")
-	fs.IntVar(&cfg.Threads, "threads", 16, "Number of parallel TCP connections for high-speed link saturation (1-64)")
+	fs.IntVar(&cfg.Threads, "t", 16, "Number of parallel TCP connections for 10G/50G/100G link saturation (1-128)")
+	fs.IntVar(&cfg.Threads, "threads", 16, "Number of parallel TCP connections for 10G/50G/100G link saturation (1-128)")
 
 	fs.BoolVar(&cfg.UseBytes, "bytes", false, "Display speed in MB/s instead of Mbps")
 
@@ -49,8 +49,8 @@ func ParseFlagsArgs(args []string) *model.Config {
 
 	if cfg.Threads < 1 {
 		cfg.Threads = 1
-	} else if cfg.Threads > 64 {
-		cfg.Threads = 64
+	} else if cfg.Threads > 128 {
+		cfg.Threads = 128
 	}
 
 	return cfg
