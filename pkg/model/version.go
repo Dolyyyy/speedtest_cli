@@ -1,4 +1,4 @@
 package model
 
-// Version of the application
-const Version = "1.0.0"
+// Version of the speedtest_cli application
+const Version = "1.1.0"

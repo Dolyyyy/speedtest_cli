@@ -41,7 +41,7 @@ irm https://raw.githubusercontent.com/Dolyyyy/speedtest_cli/main/install.ps1 | i
 ✔ Connected : Fast Fiber ISP (FR) - IP: 198.51.100.42                    
 ✔ Target server : Scaleway (Paris, France) [ID: 61933 | Host/IP: st1.scaleway.com]
 
-⚡ SPEEDTEST CLI v1.0.0
+⚡ SPEEDTEST CLI v1.1.0
 ────────────────────────────────────────────────
 ✔ Ping: 1.80 ms | Jitter: 0.12 ms   
 ✔ Download : 1927.03 Mbps (16 streams)                 
