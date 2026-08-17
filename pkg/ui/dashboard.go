@@ -20,7 +20,7 @@ func stripANSI(s string) string {
 			continue
 		}
 		if inSeq {
-			if (r >= 'a' && r <= 'z') || (r >= 'A' && r <= 'Z') || r == '~' {
+			if (r >= 'a' && r <= 'Z') || (r >= 'A' && r <= 'Z') || r == '~' {
 				inSeq = false
 			}
 			continue
@@ -30,7 +30,7 @@ func stripANSI(s string) string {
 	return b.String()
 }
 
-// truncateVis truncates a string to a maximum visual cell width
+// truncateVis truncates a string to a maximum visual cell width if needed
 func truncateVis(s string, maxVisWidth int) string {
 	if runewidth.StringWidth(s) <= maxVisWidth {
 		return s
@@ -51,7 +51,7 @@ func truncateVis(s string, maxVisWidth int) string {
 
 // PrintDashboard displays futuristic, pixel-perfect dashboard card
 func PrintDashboard(res *model.TestResult, useBytes bool) {
-	const boxWidth = 64
+	const boxWidth = 72
 
 	borderColor := color.New(color.FgHiCyan, color.Bold).SprintFunc()
 
@@ -74,25 +74,25 @@ func PrintDashboard(res *model.TestResult, useBytes bool) {
 	printRow(ColorTitle("📊 SPEEDTEST RESULTS"))
 	fmt.Println(sepBorder)
 
-	// Host Information
+	// Host & System Information (Multi-row for full clarity)
 	if res.Host.Hostname != "" {
-		hostStr := truncateVis(res.Host.Hostname, 50)
-		printRow(fmt.Sprintf("%s %s", ColorMuted("💻 Host:   "), ColorVal(hostStr)))
-
-		hostMeta := fmt.Sprintf("%s/%s (%d Cores)", res.Host.OS, res.Host.Arch, res.Host.CPUCores)
+		printRow(fmt.Sprintf("%s %s", ColorMuted("💻 Host:    "), ColorVal(truncateVis(res.Host.Hostname, 58))))
+		hostMeta := fmt.Sprintf("%s/%s (%d CPU Cores)", res.Host.OS, res.Host.Arch, res.Host.CPUCores)
+		printRow(fmt.Sprintf("   %s %s", ColorMuted("OS/CPU:  "), ColorMuted(truncateVis(hostMeta, 58))))
 		if res.Host.TotalRAM != "" {
+			var ramMeta string
 			if res.Host.AvailRAM != "" {
-				hostMeta += fmt.Sprintf(" | RAM: %s free / %s", res.Host.AvailRAM, res.Host.TotalRAM)
+				ramMeta = fmt.Sprintf("%s free / %s total", res.Host.AvailRAM, res.Host.TotalRAM)
 			} else {
-				hostMeta += fmt.Sprintf(" | RAM: %s", res.Host.TotalRAM)
+				ramMeta = res.Host.TotalRAM
 			}
+			printRow(fmt.Sprintf("   %s %s", ColorMuted("Memory:  "), ColorMuted(truncateVis(ramMeta, 58))))
 		}
-		printRow(fmt.Sprintf("   %s %s", ColorMuted("System: "), ColorMuted(truncateVis(hostMeta, 50))))
 	}
 
 	// Client Information
-	clientStr := truncateVis(fmt.Sprintf("%s (%s)", res.Client.ISP, res.Client.IP), 50)
-	printRow(fmt.Sprintf("%s %s", ColorMuted("🌐 Client: "), ColorVal(clientStr)))
+	clientStr := fmt.Sprintf("%s (%s)", res.Client.ISP, res.Client.IP)
+	printRow(fmt.Sprintf("%s %s", ColorMuted("🌐 Client:  "), ColorVal(truncateVis(clientStr, 58))))
 
 	// Server Information
 	serverLoc := res.Server.Name
@@ -100,13 +100,13 @@ func PrintDashboard(res *model.TestResult, useBytes bool) {
 		serverLoc += ", " + res.Server.Country
 	}
 	serverRaw := fmt.Sprintf("%s (%s - %.1f km)", res.Server.Sponsor, serverLoc, res.Server.Distance)
-	printRow(fmt.Sprintf("%s %s", ColorMuted("📡 Server: "), ColorVal(truncateVis(serverRaw, 50))))
+	printRow(fmt.Sprintf("%s %s", ColorMuted("📡 Server:  "), ColorVal(truncateVis(serverRaw, 58))))
 
 	fmt.Println(sepBorder)
 
 	// Latency
 	pingStr := fmt.Sprintf("%.2f ms  (Jitter: %.2f ms)", res.PingMs, res.JitterMs)
-	printRow(fmt.Sprintf("⚡ %s %s", ColorMuted("Latency:"), ColorVal(pingStr)))
+	printRow(fmt.Sprintf("⚡ %s %s", ColorMuted("Latency: "), ColorVal(pingStr)))
 
 	// Download & Upload Speeds with Visual Gauge Bar
 	var dlSpeedText, ulSpeedText string
@@ -121,8 +121,8 @@ func PrintDashboard(res *model.TestResult, useBytes bool) {
 	dlBar := renderSpeedBar(res.Download.Mbps, color.FgHiGreen)
 	ulBar := renderSpeedBar(res.Upload.Mbps, color.FgHiYellow)
 
-	printRow(fmt.Sprintf("📥 %s %-12s %s", ColorMuted("Download:"), ColorSuccess(dlSpeedText), dlBar))
-	printRow(fmt.Sprintf("📤 %s %-12s %s", ColorMuted("Upload:  "), ColorWarning(ulSpeedText), ulBar))
+	printRow(fmt.Sprintf("📥 %s %-14s %s", ColorMuted("Download:"), ColorSuccess(dlSpeedText), dlBar))
+	printRow(fmt.Sprintf("📤 %s %-14s %s", ColorMuted("Upload:  "), ColorWarning(ulSpeedText), ulBar))
 
 	fmt.Println(sepBorder)
 	printRow(fmt.Sprintf("🔗 %s", ColorMuted("https://github.com/Dolyyyy/speedtest_cli")))
@@ -145,7 +145,7 @@ func renderSpeedBar(mbps float64, barColor color.Attribute) string {
 		ratio = 1.0
 	}
 
-	barWidth := 16
+	barWidth := 18
 	filled := int(math.Round(ratio * float64(barWidth)))
 	if filled == 0 && mbps > 0 {
 		filled = 1
