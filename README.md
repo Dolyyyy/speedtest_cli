@@ -6,7 +6,7 @@
 [![License](https://img.shields.io/badge/License-MIT-blue.svg?style=for-the-badge)](LICENSE)
 [![Open Source](https://img.shields.io/badge/Open_Source-%E2%9D%A4-red?style=for-the-badge)](https://github.com/Dolyyyy/speedtest_cli)
 
-A lightweight, multi-platform, high-performance network speed test CLI tool written in **Go**. Features a modern color terminal interface, automatic server selection, multi-stream benchmarking, latency/jitter diagnostics, and structured JSON output.
+A lightweight, multi-platform, high-performance network speed test CLI tool written in **Go**. Features a modern color terminal interface, automatic server selection, multi-stream 10G/100G benchmarking, latency/jitter diagnostics, local benchmark history, and structured JSON output.
 
 ---
 
@@ -32,8 +32,14 @@ speedtest
 ## 🛠️ Usage & Examples
 
 ```bash
-# Default: Fast automatic speedtest with modern TUI card
+# Default: Fast automatic speedtest with modern TUI card (16 parallel streams)
 speedtest
+
+# Maximize multi-stream TCP saturation for 10G / 25G / 100G links
+speedtest --threads 32
+
+# View local speedtest benchmark history
+speedtest --history
 
 # Display speed in Megabytes per second (MB/s)
 speedtest --bytes
@@ -44,7 +50,10 @@ speedtest --list
 # Target a specific server by ID
 speedtest -s 12345
 
-# Export benchmark result in raw JSON for automated scripts
+# Benchmark custom infrastructure server
+speedtest --custom 10.0.0.5:8080
+
+# Export benchmark result in raw JSON format
 speedtest --json
 
 # Minimal 3-line format (Ping, Download, Upload)
@@ -58,8 +67,12 @@ speedtest --simple
 | Flag | Short | Description |
 | :--- | :--- | :--- |
 | `--help` | `-h` | Display interactive CLI help guide |
-| `--list` | `-l` | List available speedtest servers near your location |
+| `--history` | `-H` | Display local benchmark history table |
+| `--clear-history` | | Clear all saved local benchmark history records |
+| `--threads <N>` | `-t <N>` | Number of parallel TCP streams for 10G/100G links (default: 16) |
 | `--server <ID>` | `-s <ID>` | Run speedtest against a specific server ID |
+| `--custom <host>` | | Benchmark custom speedtest server host (e.g. host:port) |
+| `--list` | `-l` | List available speedtest servers near your location |
 | `--bytes` | | Display download/upload rates in MB/s (Mo/s) instead of Mbps |
 | `--json` | | Output result in raw JSON format for scripting & logging |
 | `--simple` | | Output concise 3-line format (Ping, Download, Upload) |
@@ -72,8 +85,9 @@ speedtest --simple
 - **Blazing Fast**: Written in pure Go with zero runtime dependencies.
 - **Single Command Setup**: Instant installation script downloads pre-compiled static binaries directly.
 - **Multi-Architecture Support**: Built for Linux (amd64, arm64), macOS (Intel, Apple Silicon), and Windows (amd64).
-- **Futuristic TUI**: Modern color palette, animated progress indicators, and clean summary dashboards.
-- **Accurate Network Metrics**: Multi-threaded TCP download & upload testing with low overhead latency & jitter measurements.
+- **Futuristic TUI**: Rounded neon borders, visual speed gauge progress bars, and pixel-perfect ANSI layout.
+- **Local History**: View past benchmark results with `speedtest --history`.
+- **10G/100G Network Saturation**: Tuned TCP socket transport with configurable parallel streams (`--threads`).
 - **Scripting Ready**: Supports `--json` and `--simple` outputs for seamless CI/CD integration and monitoring scripts.
 
 ---
@@ -87,15 +101,11 @@ speedtest_cli/
 ├── pkg/
 │   ├── config/            # CLI configuration & argument parsing
 │   ├── engine/            # Speedtest engine & runner workflow
-│   ├── model/             # Domain types (Client, Server, Speed, Result, Version)
-│   ├── printer/           # Formatters (TUI, JSON, Simple)
-│   └── ui/                # Modern TUI design (Colors, Spinner, Dashboard, Help)
+│   ├── history/           # Local benchmark history storage
+│   ├── model/             # 100% domain types (Client, Server, Speed, Result, Host, History, Version)
+│   ├── printer/           # Strategy pattern formatters (TUI, JSON, Simple)
+│   └── ui/                # Modern TUI design (Colors, Spinner, Dashboard, History, Help)
 ├── binaries/              # Pre-compiled multi-platform static binaries
-│   ├── speedtest-linux-amd64
-│   ├── speedtest-linux-arm64
-│   ├── speedtest-darwin-amd64
-│   ├── speedtest-darwin-arm64
-│   └── speedtest-windows-amd64.exe
 ├── build.sh               # Multi-platform compilation script
 ├── install.sh             # Linux/WSL/macOS 1-liner installer
 ├── install.ps1            # Windows PowerShell 1-liner installer

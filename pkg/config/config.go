@@ -23,6 +23,11 @@ func ParseFlagsArgs(args []string) *model.Config {
 	fs.BoolVar(&cfg.ShowList, "l", false, "List nearest available speedtest servers")
 	fs.BoolVar(&cfg.ShowList, "list", false, "List nearest available speedtest servers")
 
+	fs.BoolVar(&cfg.ShowHistory, "H", false, "Display local speedtest benchmark history")
+	fs.BoolVar(&cfg.ShowHistory, "history", false, "Display local speedtest benchmark history")
+
+	fs.BoolVar(&cfg.ClearHistory, "clear-history", false, "Clear all saved local speedtest history records")
+
 	fs.StringVar(&cfg.ServerID, "s", "", "Specify a target server ID")
 	fs.StringVar(&cfg.ServerID, "server", "", "Specify a target server ID")
 

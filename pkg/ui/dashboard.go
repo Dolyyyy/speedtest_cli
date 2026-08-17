@@ -179,3 +179,39 @@ func PrintServerList(servers []model.ServerItem) {
 	fmt.Println()
 	fmt.Printf("%s\n\n", ColorMuted("🔗 https://github.com/Dolyyyy/speedtest_cli"))
 }
+
+// PrintHistoryTable prints formatted table of local speedtest history
+func PrintHistoryTable(items []model.HistoryItem, useBytes bool) {
+	fmt.Println()
+	fmt.Printf("%s\n\n", ColorTitle("📜 BENCHMARK HISTORY:"))
+	if len(items) == 0 {
+		fmt.Println(ColorMuted("No saved speedtest history records found."))
+		fmt.Println()
+		return
+	}
+
+	if useBytes {
+		fmt.Printf("%-20s %-25s %-10s %-12s %-12s\n", ColorHeader("DATE/TIME"), ColorHeader("SERVER"), ColorHeader("PING"), ColorHeader("DOWNLOAD"), ColorHeader("UPLOAD"))
+	} else {
+		fmt.Printf("%-20s %-25s %-10s %-12s %-12s\n", ColorHeader("DATE/TIME"), ColorHeader("SERVER"), ColorHeader("PING"), ColorHeader("DOWNLOAD"), ColorHeader("UPLOAD"))
+	}
+	fmt.Println(strings.Repeat("─", 82))
+
+	for _, item := range items {
+		var dlStr, ulStr string
+		if useBytes {
+			dlStr = fmt.Sprintf("%.2f MB/s", item.Download.MBps)
+			ulStr = fmt.Sprintf("%.2f MB/s", item.Upload.MBps)
+		} else {
+			dlStr = fmt.Sprintf("%.2f Mbps", item.Download.Mbps)
+			ulStr = fmt.Sprintf("%.2f Mbps", item.Upload.Mbps)
+		}
+
+		serverStr := truncateVis(item.Server, 24)
+		pingStr := fmt.Sprintf("%.2f ms", item.PingMs)
+
+		fmt.Printf("%-20s %-25s %-10s %-12s %-12s\n", item.Timestamp, serverStr, pingStr, ColorSuccess(dlStr), ColorWarning(ulStr))
+	}
+	fmt.Println()
+	fmt.Printf("%s\n\n", ColorMuted("🔗 https://github.com/Dolyyyy/speedtest_cli"))
+}
