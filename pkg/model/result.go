@@ -5,6 +5,7 @@ import "time"
 // TestResult encapsulates complete benchmark execution data
 type TestResult struct {
 	Timestamp time.Time  `json:"timestamp"`
+	Host      HostInfo   `json:"host"`
 	Client    ClientInfo `json:"client"`
 	Server    ServerInfo `json:"server"`
 	PingMs    float64    `json:"ping_ms"`

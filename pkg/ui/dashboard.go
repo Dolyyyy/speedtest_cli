@@ -8,7 +8,7 @@ import (
 	"github.com/fatih/color"
 )
 
-// PrintDashboard displays futuristic dashboard card in English with GitHub URL
+// PrintDashboard displays futuristic dashboard card in English with Host Info and GitHub URL
 func PrintDashboard(res *model.TestResult, useBytes bool) {
 	border := color.CyanString("┌────────────────────────────────────────────────────────┐")
 	sep := color.CyanString("├────────────────────────────────────────────────────────┤")
@@ -18,6 +18,7 @@ func PrintDashboard(res *model.TestResult, useBytes bool) {
 	fmt.Println(border)
 	fmt.Printf("│  %s                   │\n", ColorTitle("📊 SPEEDTEST RESULTS"))
 	fmt.Println(sep)
+	fmt.Printf("│  %s %-45s │\n", ColorMuted("Host:    "), ColorVal(res.Host.String()))
 	fmt.Printf("│  %s %-45s │\n", ColorMuted("Client:  "), ColorVal(fmt.Sprintf("%s (%s)", res.Client.ISP, res.Client.IP)))
 	fmt.Printf("│  %s %-45s │\n", ColorMuted("Server:  "), ColorVal(fmt.Sprintf("%s - %s (%s)", res.Server.Sponsor, res.Server.Name, res.Server.Country)))
 	fmt.Println(sep)

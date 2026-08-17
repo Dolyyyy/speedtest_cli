@@ -6,9 +6,34 @@ import (
 	"time"
 )
 
+func TestFetchHostInfo(t *testing.T) {
+	info := FetchHostInfo()
+	if info.Hostname == "" {
+		t.Error("expected non-empty hostname")
+	}
+	if info.OS == "" {
+		t.Error("expected non-empty OS")
+	}
+	if info.CPUCores < 1 {
+		t.Errorf("expected CPUCores >= 1, got %d", info.CPUCores)
+	}
+
+	str := info.String()
+	if str == "" {
+		t.Error("expected non-empty formatted HostInfo string")
+	}
+}
+
 func TestJSONResultSerialization(t *testing.T) {
 	res := TestResult{
 		Timestamp: time.Now(),
+		Host: HostInfo{
+			Hostname: "test-server",
+			OS:       "linux",
+			Arch:     "amd64",
+			CPUCores: 8,
+			TotalRAM: "16.0 GB",
+		},
 		Client: ClientInfo{
 			IP:      "1.2.3.4",
 			ISP:     "TestISP",
@@ -45,10 +70,12 @@ func TestJSONResultSerialization(t *testing.T) {
 		t.Fatalf("failed to unmarshal TestResult: %v", err)
 	}
 
+	if unmarshaled.Host.Hostname != "test-server" {
+		t.Errorf("expected host hostname test-server, got %s", unmarshaled.Host.Hostname)
+	}
 	if unmarshaled.Client.IP != "1.2.3.4" {
 		t.Errorf("expected client IP 1.2.3.4, got %s", unmarshaled.Client.IP)
 	}
-
 	if unmarshaled.Download.Mbps != 950.5 {
 		t.Errorf("expected download Mbps 950.5, got %f", unmarshaled.Download.Mbps)
 	}

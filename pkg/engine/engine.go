@@ -137,6 +137,7 @@ func FetchServerItems(r *model.Runner) ([]model.ServerItem, error) {
 // Run executes complete benchmark workflow
 func Run(r *model.Runner) (*model.TestResult, error) {
 	quiet := r.Cfg.IsQuiet()
+	hostInfo := model.FetchHostInfo()
 
 	// 1. User Info & Server Discovery (IPv4 Priority)
 	spUser := ui.NewSpinner("Connecting & detecting connection metadata (IPv4 preference)...", quiet)
@@ -265,6 +266,7 @@ func Run(r *model.Runner) (*model.TestResult, error) {
 
 	result := &model.TestResult{
 		Timestamp: time.Now(),
+		Host:      hostInfo,
 		Client:    clientInfo,
 		Server: model.ServerInfo{
 			ID:       server.ID,
