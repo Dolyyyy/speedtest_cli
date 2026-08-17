@@ -1,0 +1,7 @@
+# Binaries to ignore in root
+/speedtest
+/speedtest.exe
+
+# OS generated files
+.DS_Store
+*.swp
