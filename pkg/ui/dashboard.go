@@ -2,39 +2,162 @@ package ui
 
 import (
 	"fmt"
+	"math"
 	"strings"
 
 	"github.com/Dolyyyy/speedtest_cli/pkg/model"
 	"github.com/fatih/color"
+	"github.com/mattn/go-runewidth"
 )
 
-// PrintDashboard displays futuristic dashboard card in English with Host Info and GitHub URL
-func PrintDashboard(res *model.TestResult, useBytes bool) {
-	border := color.CyanString("┌────────────────────────────────────────────────────────┐")
-	sep := color.CyanString("├────────────────────────────────────────────────────────┤")
-	bottom := color.CyanString("└────────────────────────────────────────────────────────┘")
-
-	fmt.Println()
-	fmt.Println(border)
-	fmt.Printf("│  %s                   │\n", ColorTitle("📊 SPEEDTEST RESULTS"))
-	fmt.Println(sep)
-	fmt.Printf("│  %s %-45s │\n", ColorMuted("Host:    "), ColorVal(res.Host.String()))
-	fmt.Printf("│  %s %-45s │\n", ColorMuted("Client:  "), ColorVal(fmt.Sprintf("%s (%s)", res.Client.ISP, res.Client.IP)))
-	fmt.Printf("│  %s %-45s │\n", ColorMuted("Server:  "), ColorVal(fmt.Sprintf("%s - %s (%s)", res.Server.Sponsor, res.Server.Name, res.Server.Country)))
-	fmt.Println(sep)
-	fmt.Printf("│  ⚡ %s  %-39s │\n", ColorMuted("Ping:    "), ColorVal(fmt.Sprintf("%.2f ms  (Jitter: %.2f ms)", res.PingMs, res.JitterMs)))
-
-	if useBytes {
-		fmt.Printf("│  📥 %s  %-39s │\n", ColorMuted("Download:"), ColorSuccess(fmt.Sprintf("%.2f MB/s", res.Download.MBps)))
-		fmt.Printf("│  📤 %s  %-39s │\n", ColorMuted("Upload:  "), ColorWarning(fmt.Sprintf("%.2f MB/s", res.Upload.MBps)))
-	} else {
-		fmt.Printf("│  📥 %s  %-39s │\n", ColorMuted("Download:"), ColorSuccess(fmt.Sprintf("%.2f Mbps", res.Download.Mbps)))
-		fmt.Printf("│  📤 %s  %-39s │\n", ColorMuted("Upload:  "), ColorWarning(fmt.Sprintf("%.2f Mbps", res.Upload.Mbps)))
+// stripANSI removes ANSI color code sequences from a string
+func stripANSI(s string) string {
+	var b strings.Builder
+	inSeq := false
+	for _, r := range s {
+		if r == '\x1b' {
+			inSeq = true
+			continue
+		}
+		if inSeq {
+			if (r >= 'a' && r <= 'z') || (r >= 'A' && r <= 'Z') || r == '~' {
+				inSeq = false
+			}
+			continue
+		}
+		b.WriteRune(r)
 	}
-	fmt.Println(sep)
-	fmt.Printf("│  🔗 %-50s │\n", ColorMuted("https://github.com/Dolyyyy/speedtest_cli"))
-	fmt.Println(bottom)
+	return b.String()
+}
+
+// truncateVis truncates a string to a maximum visual cell width
+func truncateVis(s string, maxVisWidth int) string {
+	if runewidth.StringWidth(s) <= maxVisWidth {
+		return s
+	}
+	var b strings.Builder
+	currW := 0
+	for _, r := range s {
+		rw := runewidth.RuneWidth(r)
+		if currW+rw > maxVisWidth-3 {
+			break
+		}
+		b.WriteRune(r)
+		currW += rw
+	}
+	b.WriteString("...")
+	return b.String()
+}
+
+// PrintDashboard displays futuristic, pixel-perfect dashboard card
+func PrintDashboard(res *model.TestResult, useBytes bool) {
+	const boxWidth = 64
+
+	borderColor := color.New(color.FgHiCyan, color.Bold).SprintFunc()
+
+	topBorder := borderColor("╭" + strings.Repeat("─", boxWidth+2) + "╮")
+	sepBorder := borderColor("├" + strings.Repeat("─", boxWidth+2) + "┤")
+	botBorder := borderColor("╰" + strings.Repeat("─", boxWidth+2) + "╯")
+
+	printRow := func(content string) {
+		plainText := stripANSI(content)
+		visWidth := runewidth.StringWidth(plainText)
+		pad := boxWidth - visWidth
+		if pad < 0 {
+			pad = 0
+		}
+		fmt.Printf("%s %s%s %s\n", borderColor("│"), content, strings.Repeat(" ", pad), borderColor("│"))
+	}
+
 	fmt.Println()
+	fmt.Println(topBorder)
+	printRow(ColorTitle("📊 SPEEDTEST RESULTS"))
+	fmt.Println(sepBorder)
+
+	// Host Information
+	if res.Host.Hostname != "" {
+		hostStr := truncateVis(res.Host.Hostname, 50)
+		printRow(fmt.Sprintf("%s %s", ColorMuted("💻 Host:   "), ColorVal(hostStr)))
+
+		hostMeta := fmt.Sprintf("%s/%s (%d Cores)", res.Host.OS, res.Host.Arch, res.Host.CPUCores)
+		if res.Host.TotalRAM != "" {
+			if res.Host.AvailRAM != "" {
+				hostMeta += fmt.Sprintf(" | RAM: %s free / %s", res.Host.AvailRAM, res.Host.TotalRAM)
+			} else {
+				hostMeta += fmt.Sprintf(" | RAM: %s", res.Host.TotalRAM)
+			}
+		}
+		printRow(fmt.Sprintf("   %s %s", ColorMuted("System: "), ColorMuted(truncateVis(hostMeta, 50))))
+	}
+
+	// Client Information
+	clientStr := truncateVis(fmt.Sprintf("%s (%s)", res.Client.ISP, res.Client.IP), 50)
+	printRow(fmt.Sprintf("%s %s", ColorMuted("🌐 Client: "), ColorVal(clientStr)))
+
+	// Server Information
+	serverLoc := res.Server.Name
+	if res.Server.Country != "" {
+		serverLoc += ", " + res.Server.Country
+	}
+	serverRaw := fmt.Sprintf("%s (%s - %.1f km)", res.Server.Sponsor, serverLoc, res.Server.Distance)
+	printRow(fmt.Sprintf("%s %s", ColorMuted("📡 Server: "), ColorVal(truncateVis(serverRaw, 50))))
+
+	fmt.Println(sepBorder)
+
+	// Latency
+	pingStr := fmt.Sprintf("%.2f ms  (Jitter: %.2f ms)", res.PingMs, res.JitterMs)
+	printRow(fmt.Sprintf("⚡ %s %s", ColorMuted("Latency:"), ColorVal(pingStr)))
+
+	// Download & Upload Speeds with Visual Gauge Bar
+	var dlSpeedText, ulSpeedText string
+	if useBytes {
+		dlSpeedText = fmt.Sprintf("%.2f MB/s", res.Download.MBps)
+		ulSpeedText = fmt.Sprintf("%.2f MB/s", res.Upload.MBps)
+	} else {
+		dlSpeedText = fmt.Sprintf("%.2f Mbps", res.Download.Mbps)
+		ulSpeedText = fmt.Sprintf("%.2f Mbps", res.Upload.Mbps)
+	}
+
+	dlBar := renderSpeedBar(res.Download.Mbps, color.FgHiGreen)
+	ulBar := renderSpeedBar(res.Upload.Mbps, color.FgHiYellow)
+
+	printRow(fmt.Sprintf("📥 %s %-12s %s", ColorMuted("Download:"), ColorSuccess(dlSpeedText), dlBar))
+	printRow(fmt.Sprintf("📤 %s %-12s %s", ColorMuted("Upload:  "), ColorWarning(ulSpeedText), ulBar))
+
+	fmt.Println(sepBorder)
+	printRow(fmt.Sprintf("🔗 %s", ColorMuted("https://github.com/Dolyyyy/speedtest_cli")))
+	fmt.Println(botBorder)
+	fmt.Println()
+}
+
+// renderSpeedBar renders a visual progress gauge bar
+func renderSpeedBar(mbps float64, barColor color.Attribute) string {
+	maxScale := 1000.0
+	if mbps > 1000.0 {
+		maxScale = 10000.0
+	}
+	if mbps > 10000.0 {
+		maxScale = 100000.0
+	}
+
+	ratio := mbps / maxScale
+	if ratio > 1.0 {
+		ratio = 1.0
+	}
+
+	barWidth := 16
+	filled := int(math.Round(ratio * float64(barWidth)))
+	if filled == 0 && mbps > 0 {
+		filled = 1
+	}
+
+	cFunc := color.New(barColor).SprintFunc()
+	cMuted := color.New(color.FgHiBlack).SprintFunc()
+
+	filledBar := cFunc(strings.Repeat("█", filled))
+	emptyBar := cMuted(strings.Repeat("░", barWidth-filled))
+
+	return "[" + filledBar + emptyBar + "]"
 }
 
 // PrintServerList prints table of available servers in English
