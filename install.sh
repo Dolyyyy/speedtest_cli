@@ -3,7 +3,7 @@ set -e
 
 REPO="Dolyyyy/speedtest_cli"
 INSTALL_DIR="/usr/local/bin"
-BINARY_NAME="${BINARY_NAME:-speedtest}"
+BINARY_NAME="${1:-${BINARY_NAME:-speedtest}}"
 
 # Detect OS and Architecture
 OS="$(uname -s | tr '[:upper:]' '[:lower:]')"
